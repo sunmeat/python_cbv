@@ -1,1 +1,1 @@
-# NewApp
+# Class Based Views
