@@ -102,36 +102,30 @@ class MultiGetView(View):
 # TemplateView - це класове подання, яке автоматично рендерить шаблон і передає в нього контекст
 
 class WeatherAsyncTemplateView(TemplateView):
-    template_name = "weather/weather.html" # шлях до шаблону, який буде рендеритися при виклику цього подання
 
-    async def get_context_data(self, **kwargs):
-        """Асинхронний метод отримання контексту"""
-        # викликається синхронний суперметод через sync_to_async
-        context = await sync_to_async(super().get_context_data)(**kwargs)
-
-        # асинхронна функція для отримання даних про погоду
-        async def fetch():
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    "https://api.open-meteo.com/v1/forecast?latitude=46.477&longitude=30.733&current_weather=true"
-                )
-                return resp.json()
-
-        try:
-            data = await fetch()
-            context["temperature"] = data["current_weather"]["temperature"]
-            context["wind"] = data["current_weather"]["windspeed"]
-            context["city"] = "Одеса"
-            context["fetched_at"] = time.strftime("%H:%M:%S")
-        except Exception as e:
-            context["error"] = str(e)
-
-        return context
+    template_name = "weather/weather.html"
 
     async def get(self, request, *args, **kwargs):
-        """Асинхронний GET метод"""
-        context = await self.get_context_data(**kwargs)
-        return await sync_to_async(self.render_to_response)(context)
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": 46.477,
+                    "longitude": 30.733,
+                    "current_weather": "true"
+                }
+            )
+
+        data = response.json()["current_weather"]
+
+        context = {
+            "city": "Одеса",
+            "temperature": data["temperature"],
+            "wind": data["windspeed"]
+        }
+
+        return self.render_to_response(context)
 
 # специфічні методи для Generic Views (TemplateView, ListView тощо):
 # - get_context_data(), повертає словник контексту для шаблону
